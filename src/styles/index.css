@@ -1,0 +1,83 @@
+:root {
+  --font-family: "Inter", system-ui, -apple-system, sans-serif;
+  --primary: #d4af37; /* Luxury Gold */
+  --primary-hover: #b5952f;
+  --bg-color: #070709; /* Deep Rich Black */
+  --text-color: rgba(255, 255, 255, 0.95);
+  --card-bg: #121215;
+
+  font-family: var(--font-family);
+  line-height: 1.6;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  background-image: radial-gradient(circle at 50% 0%, #1a1a24 0%, #070709 70%);
+  background-attachment: fixed;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.content-wrapper {
+  flex: 1;
+  width: 100%;
+}
+
+h1,
+h2,
+h3 {
+  font-family:
+    "Playfair Display", serif; /* Optional: add a serif font for headings in index.html */
+  letter-spacing: 0.5px;
+}
+
+h1 {
+  font-size: 3.5em;
+  line-height: 1.2;
+}
+
+button {
+  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 0.7em 1.4em;
+  font-size: 0.95em;
+  font-weight: 600;
+  font-family: inherit;
+  background-color: var(--card-bg);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+button:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+}
+
+button:focus,
+button:focus-visible {
+  outline: 2px solid var(--primary);
+}

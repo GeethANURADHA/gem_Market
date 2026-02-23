@@ -1,0 +1,242 @@
+.home-layout {
+  display: flex;
+  background: transparent;
+  color: white;
+  position: relative;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* TOGGLE BUTTON (Floating) */
+.toggle-btn {
+  position: fixed;
+  top: 5.5rem;
+  left: 1.5rem;
+  z-index: 1001;
+  background: rgba(18, 18, 21, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 8px;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  padding: 0;
+}
+
+.toggle-btn:hover {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--primary);
+  border-color: rgba(212, 175, 55, 0.4);
+  transform: scale(1.05);
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 300px;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: rgba(12, 12, 15, 0.95);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 6rem 2rem 2rem;
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 5px 0 25px rgba(0, 0, 0, 0.5);
+}
+
+.home-layout.collapsed .sidebar {
+  transform: translateX(-100%);
+  box-shadow: none;
+}
+
+.logo {
+  margin-bottom: 2.5rem;
+  color: var(--primary);
+  font-weight: 300;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 1.5rem;
+}
+
+.nav-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nav-item {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.3s ease;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 100%;
+}
+
+.nav-item:hover {
+  color: var(--primary);
+  background: rgba(212, 175, 55, 0.05);
+  transform: translateX(5px);
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+  margin: 2rem 0;
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.filters h3 {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 0.5rem;
+}
+
+.filters input[type="text"],
+.filters select {
+  padding: 0.8rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 6px;
+  font-family: inherit;
+  transition: border-color 0.3s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.filters input[type="text"]:focus,
+.filters select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.filters label {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.5rem;
+}
+
+.filters input[type="range"] {
+  width: 100%;
+  accent-color: var(--primary);
+}
+
+/* CONTENT SHIFT */
+.content {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-left: 300px;
+  transition: margin-left 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.home-layout.collapsed .content {
+  margin-left: 0;
+}
+
+.hero {
+  text-align: center;
+  padding: 5rem 2rem 2rem;
+}
+
+.hero h1 {
+  background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1.2rem;
+  letter-spacing: 1px;
+}
+
+.gem-canvas {
+  height: 50vh;
+  margin-bottom: 2rem;
+}
+
+.gems-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 2.5rem;
+  padding: 2rem 4rem 4rem;
+}
+
+.no-gems-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1.2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* --- RESPONSIVE MEDIA QUERIES --- */
+@media (max-width: 900px) {
+  .gems-grid {
+    padding: 2rem;
+    gap: 1.5rem;
+  }
+  .content {
+    margin-left: 0 !important; /* Never shift content on smaller screens */
+  }
+}
+
+@media (max-width: 600px) {
+  .toggle-btn {
+    top: 4.5rem;
+    left: 1rem;
+    width: 40px;
+    height: 40px;
+  }
+
+  .sidebar {
+    width: 85vw; /* Takes up most of the screen */
+    max-width: 320px;
+    padding: 5rem 1.5rem 2rem;
+  }
+
+  .hero {
+    padding: 4rem 1rem 1rem;
+  }
+
+  .hero h1 {
+    font-size: 2.2rem;
+  }
+
+  .gems-grid {
+    padding: 1rem;
+    grid-template-columns: 1fr; /* Stack cards 1 by 1 on very small phones */
+  }
+
+  .gem-canvas {
+    height: 40vh;
+  }
+}
