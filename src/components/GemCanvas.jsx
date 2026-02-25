@@ -1,16 +1,24 @@
-import React, { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { MeshTransmissionMaterial } from "@react-three/drei";
-import * as THREE from "three";
 
+
+/**
+ * @component Gem
+ */
 const Gem = () => {
-  const meshRef = useRef();
+  /** @type {React.MutableRefObject<any>} */
+  const meshRef = useRef(null);
   const scrollY = useRef(0);
 
   // Track scroll
-  window.addEventListener("scroll", () => {
-    scrollY.current = window.scrollY;
-  });
+  useEffect(() => {
+    const handleScroll = () => {
+      scrollY.current = window.scrollY;
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useFrame(() => {
     if (!meshRef.current) return;

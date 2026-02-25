@@ -1,7 +1,9 @@
-import React from 'react';
 import { Facebook, Instagram, Twitter, Mail, Info } from 'lucide-react';
 import '../styles/Footer.css';
 
+/**
+ * @component Footer
+ */
 const Footer = () => {
   return (
     <footer className="footer">

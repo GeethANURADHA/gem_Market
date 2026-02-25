@@ -1,49 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
-import Input from '../components/Input';
-import Button from '../components/Button';
-import { gemService } from '../services/gemService';
-import './AdminAddEdit.css';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Save, X } from "lucide-react";
+import Input from "../components/Input";
+import Button from "../components/Button";
+import { gemService } from "../services/gemService";
+import "./AdminAddEdit.css";
 
 const AdminAddEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!id;
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(/** @type {{name:string,price:number|string,carat:number|string,description:string,imageUrl:string,category:string}} */ ({
     name: '',
     price: '',
+    carat: '',
     description: '',
     imageUrl: '',
-    category: 'Precious'
-  });
+    category: 'Precious',
+  }));
 
   useEffect(() => {
     if (isEditMode) {
-      const gem = gemService.getById(id);
-      if (gem) {
-        setFormData(gem);
-      } else {
-        navigate('/admin');
-      }
+      const fetchGem = async () => {
+        try {
+          const gem = await gemService.getById(id);
+          if (gem) {
+            setFormData(gem);
+          } else {
+            navigate('/admin');
+          }
+        } catch (err) {
+          console.error('Failed to load gem:', err);
+          navigate('/admin');
+        }
+      };
+      fetchGem();
     }
   }, [id, isEditMode, navigate]);
 
-  /**
-   * @param {React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>} e
-   */
+  /** @param {React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>} e */
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: name === 'price' ? parseFloat(value) || '' : value
+      // Parse both price and carat as numbers
+      [name]:
+        name === 'price' || name === 'carat' ? parseFloat(value) || '' : value,
     }));
   };
 
-  /**
-   * @param {React.ChangeEvent<HTMLInputElement>} e
-   */
+  /** @param {React.ChangeEvent<HTMLInputElement>} e */
   const handleImageUpload = (e) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
@@ -51,9 +58,9 @@ const AdminAddEdit = () => {
       reader.onloadend = () => {
         const result = reader.result;
         if (typeof result === 'string') {
-           setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
-            imageUrl: result
+            imageUrl: result,
           }));
         }
       };
@@ -61,27 +68,43 @@ const AdminAddEdit = () => {
     }
   };
 
-  /**
-   * @param {React.FormEvent} e
-   */
-  const handleSubmit = (e) => {
+  /** @param {React.FormEvent<HTMLFormElement>} e */
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEditMode) {
-      gemService.update(id, formData);
-    } else {
-      gemService.add(formData);
+    try {
+      /** @type {import('../services/gemService').Gem} */
+      const payload = /** @type {any} */ (formData);
+      if (isEditMode) {
+        await gemService.update(/** @type {string} */ (id), payload);
+      } else {
+        await gemService.add(payload);
+      }
+      navigate('/admin');
+    } catch (err) {
+      console.error('Failed to save gem:', err);
     }
-    navigate('/admin');
   };
 
   return (
     <div className="page-container admin-form-page">
       <div className="form-container">
-        <Button variant="secondary" onClick={() => navigate('/admin')} className="back-btn">
+        <button
+          className="form-close-btn"
+          onClick={() => navigate("/admin")}
+          title="Close"
+        >
+          <X size={24} />
+        </button>
+
+        <Button
+          variant="secondary"
+          onClick={() => navigate("/admin")}
+          className="back-btn"
+        >
           <ArrowLeft size={18} /> Back to Dashboard
         </Button>
 
-        <h1>{isEditMode ? 'Edit Gem' : 'Add New Gem'}</h1>
+        <h1>{isEditMode ? "Edit Gem" : "Add New Gem"}</h1>
 
         <form onSubmit={handleSubmit} className="gem-form">
           <Input
@@ -94,7 +117,9 @@ const AdminAddEdit = () => {
           />
 
           <div className="input-group">
-            <label className="input-label" htmlFor="category">Category</label>
+            <label className="input-label" htmlFor="category">
+              Category
+            </label>
             <select
               id="category"
               name="category"
@@ -111,6 +136,17 @@ const AdminAddEdit = () => {
           </div>
 
           <Input
+            label="Carat Weight"
+            name="carat"
+            type="number"
+            step="0.01"
+            value={formData.carat}
+            onChange={handleChange}
+            required
+            placeholder="e.g. 1.25"
+          />
+
+          <Input
             label="Price ($)"
             name="price"
             type="number"
@@ -121,21 +157,31 @@ const AdminAddEdit = () => {
           />
 
           <div className="input-group">
-            <label className="input-label" htmlFor="imageUrl">Gem Image</label>
+            <label className="input-label" htmlFor="imageUrl">
+              Gem Image
+            </label>
             <input
               type="file"
               id="imageUrl"
               accept="image/*"
               onChange={handleImageUpload}
               className="input-field"
-              style={{ paddingTop: '8px' }}
+              style={{ paddingTop: "8px" }}
             />
             {formData.imageUrl && (
-              <div className="image-preview" style={{ marginTop: '1rem', textAlign: 'center' }}>
-                <img 
-                  src={formData.imageUrl} 
-                  alt="Preview" 
-                  style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px', objectFit: 'contain' }} 
+              <div
+                className="image-preview"
+                style={{ marginTop: "1rem", textAlign: "center" }}
+              >
+                <img
+                  src={formData.imageUrl}
+                  alt="Preview"
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "200px",
+                    borderRadius: "4px",
+                    objectFit: "contain",
+                  }}
                 />
               </div>
             )}
@@ -152,8 +198,8 @@ const AdminAddEdit = () => {
           />
 
           <div className="form-actions">
-            <Button type="submit" variant="primary" className="save-btn" onClick={() => {}}>
-              <Save size={20} /> {isEditMode ? 'Update Gem' : 'Add Gem'}
+            <Button type="submit" variant="primary" className="save-btn">
+              <Save size={20} /> {isEditMode ? "Update Gem" : "Add Gem"}
             </Button>
           </div>
         </form>

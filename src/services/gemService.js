@@ -1,31 +1,4 @@
-const GEMS_KEY = 'gemstone_business_gems';
-
-const initialGems = [
-  {
-    id: '1',
-    name: 'Blue Sapphire',
-    description: 'A stunning deep blue sapphire, perfect for rings.',
-    price: 1200,
-    imageUrl: 'https://images.unsplash.com/photo-1599707367072-cd6ad66acc40?auto=format&fit=crop&q=80&w=800',
-    category: 'Precious',
-  },
-  {
-    id: '2',
-    name: 'Ruby',
-    description: 'A vibrant red ruby with excellent clarity.',
-    price: 950,
-    imageUrl: 'https://images.unsplash.com/photo-1615655406736-b37c4fabf923?auto=format&fit=crop&q=80&w=800',
-    category: 'Precious',
-  },
-  {
-    id: '3',
-    name: 'Emerald',
-    description: 'Lush green emerald from Colombia.',
-    price: 1500,
-    imageUrl: 'https://images.unsplash.com/photo-1600078652297-7d5a528cc839?auto=format&fit=crop&q=80&w=800',
-    category: 'Precious',
-  }
-];
+import { supabase } from '../lib/supabaseClient';
 
 /**
  * @typedef {Object} Gem
@@ -33,49 +6,102 @@ const initialGems = [
  * @property {string} name
  * @property {string} description
  * @property {number} price
+ * @property {number} carat
  * @property {string} imageUrl
  * @property {string} category
  */
-export const gemService = {
-  getAll: () => {
-    const stored = localStorage.getItem(GEMS_KEY);
-    if (!stored) {
-      localStorage.setItem(GEMS_KEY, JSON.stringify(initialGems));
-      return initialGems;
-    }
-    return JSON.parse(stored);
-  },
 
-  getById: (id) => {
-    const gems = gemService.getAll();
-    return gems.find(g => g.id === id);
+/**
+ * @param {Record<string, any>} row
+ * @returns {Gem}
+ */
+const toGem = (row) => ({
+  id: row.id,
+  name: row.name,
+  description: row.description,
+  price: row.price,
+  carat: row.carat,
+  imageUrl: row.image_url,
+  category: row.category,
+});
+
+/**
+ * @param {Record<string, any>} gem
+ * @returns {Record<string, any>}
+ */
+const toRow = (gem) => ({
+  name: gem.name,
+  description: gem.description,
+  price: gem.price,
+  carat: gem.carat,
+  image_url: gem.imageUrl,
+  category: gem.category,
+});
+
+export const gemService = {
+  /** @returns {Promise<Gem[]>} */
+  getAll: async () => {
+    const { data, error } = await supabase
+      .from('gems')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(toGem);
   },
 
   /**
-   * @param {Omit<Gem, 'id'>} gem
+   * @param {string} id
+   * @returns {Promise<Gem>}
    */
-  add: (gem) => {
-    const gems = gemService.getAll();
-    const newGem = { ...gem, id: Date.now().toString() };
-    const updatedGems = [...gems, newGem];
-    localStorage.setItem(GEMS_KEY, JSON.stringify(updatedGems));
-    return newGem;
+  getById: async (id) => {
+    const { data, error } = await supabase
+      .from('gems')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return toGem(data);
   },
 
-  update: (id, updatedGem) => {
-    const gems = gemService.getAll();
-    const index = gems.findIndex(g => g.id === id);
-    if (index !== -1) {
-      gems[index] = { ...gems[index], ...updatedGem, id };
-      localStorage.setItem(GEMS_KEY, JSON.stringify(gems));
-      return gems[index];
-    }
-    return null;
+  /**
+   * @param {{name:string,description:string,price:number,carat:number,imageUrl:string,category:string}} gem
+   * @returns {Promise<Gem>}
+   */
+  add: async (gem) => {
+    const { data, error } = await supabase
+      .from('gems')
+      .insert([toRow(gem)])
+      .select()
+      .single();
+    if (error) throw error;
+    return toGem(data);
   },
 
-  delete: (id) => {
-    const gems = gemService.getAll();
-    const filteredGems = gems.filter(g => g.id !== id);
-    localStorage.setItem(GEMS_KEY, JSON.stringify(filteredGems));
-  }
+  /**
+   * @param {string} id
+   * @param {Record<string,any>} updatedGem
+   * @returns {Promise<Gem>}
+   */
+  update: async (id, updatedGem) => {
+    const { data, error } = await supabase
+      .from('gems')
+      .update(toRow(updatedGem))
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return toGem(data);
+  },
+
+  /**
+   * @param {string} id
+   * @returns {Promise<void>}
+   */
+  delete: async (id) => {
+    const { error } = await supabase
+      .from('gems')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  },
 };

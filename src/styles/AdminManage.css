@@ -1,0 +1,225 @@
+.manage-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1.5rem 3rem;
+}
+
+.manage-loading {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-muted, #aaa);
+}
+
+.manage-header {
+  margin-bottom: 2.5rem;
+}
+
+.manage-header h1 {
+  font-family: var(--font-serif, "Playfair Display", serif);
+  font-size: 2.8rem;
+  background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+  letter-spacing: 1px;
+}
+
+.manage-subtitle {
+  color: var(--text-muted, #aaa);
+  font-size: 0.95rem;
+}
+
+.manage-section {
+  margin-bottom: 2.5rem;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color, #e0e0e0);
+  margin-bottom: 1rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.badge {
+  background: var(--primary, #7c6ed8);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  margin-left: 0.25rem;
+}
+
+.empty-state {
+  color: var(--text-muted, #aaa);
+  font-style: italic;
+  padding: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.manage-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.manage-card {
+  background: var(--card-bg, #1e1e2e);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: border-color 0.2s;
+}
+
+.manage-card:hover {
+  border-color: rgba(124, 110, 216, 0.3);
+}
+
+.manage-card.self-card {
+  border-color: rgba(124, 110, 216, 0.4);
+  background: rgba(124, 110, 216, 0.05);
+}
+
+.manage-card-info {
+  flex: 1;
+}
+
+.manage-card-name {
+  font-weight: 600;
+  color: var(--text-color, #e0e0e0);
+  margin-bottom: 0.2rem;
+}
+
+.manage-card-email {
+  color: var(--primary, #7c6ed8);
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.manage-card-reason {
+  color: var(--text-muted, #aaa);
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-bottom: 0.25rem;
+}
+
+.manage-card-date {
+  color: var(--text-muted, #888);
+  font-size: 0.78rem;
+}
+
+.you-badge {
+  display: inline-block;
+  background: rgba(124, 110, 216, 0.2);
+  color: var(--primary, #7c6ed8);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+}
+
+.manage-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.action-btn:hover {
+  transform: translateY(-1px);
+}
+
+.approve-btn {
+  background: rgba(72, 199, 142, 0.15);
+  color: #48c78e;
+  border: 1px solid rgba(72, 199, 142, 0.3);
+}
+
+.approve-btn:hover {
+  background: rgba(72, 199, 142, 0.25);
+}
+
+.reject-btn {
+  background: rgba(255, 77, 77, 0.1);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 77, 77, 0.25);
+}
+
+.reject-btn:hover {
+  background: rgba(255, 77, 77, 0.2);
+}
+
+.action-status {
+  font-size: 0.82rem;
+  color: var(--text-muted, #aaa);
+}
+
+.action-status.error {
+  color: #ff6b6b;
+}
+
+@media (max-width: 600px) {
+  .manage-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .manage-card-actions {
+    width: 100%;
+  }
+  .action-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+.quick-add-form {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.quick-add-input {
+  flex: 1;
+  background: var(--card-bg, #1e1e2e);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  color: var(--text-color, #e0e0e0);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.quick-add-input:focus {
+  outline: none;
+  border-color: var(--primary, #7c6ed8);
+}
+
+@media (max-width: 600px) {
+  .quick-add-form {
+    flex-direction: column;
+  }
+}
