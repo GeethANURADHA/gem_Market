@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Gem, LogOut, User, ChevronDown, ChevronRight, Shield } from "lucide-react";
 import { useAuth } from "../context/authContext";
+import { gemstoneTypeService } from "../services/gemstoneTypeService";
 import "./Navbar.css";
 
 const Navbar = () => {
@@ -9,6 +10,19 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMegaMenuOpen, setIsMegaMenuOpen] = useState(false);
+  const [varieties, setVarieties] = useState(/** @type {string[]} */ ([]));
+
+  useEffect(() => {
+    const loadVarieties = async () => {
+      try {
+        const types = await gemstoneTypeService.getAll();
+        setVarieties(types.map(t => t.name));
+      } catch (err) {
+        console.error("Failed to load varieties for navbar:", err);
+      }
+    };
+    loadVarieties();
+  }, []);
 
   /** @param {string} filterValue */
   const handleFilterClick = (filterValue) => {
@@ -137,33 +151,11 @@ const Navbar = () => {
                 <div className="mega-col">
                   <h4>Varieties</h4>
                   <ul>
-                    <li onClick={() => handleFilterClick("Blue Sapphire")}>
-                      <ChevronRight size={14} className="chevron" /> Blue
-                      Sapphires
-                    </li>
-                    <li onClick={() => handleFilterClick("Yellow Sapphire")}>
-                      <ChevronRight size={14} className="chevron" /> Yellow
-                      Sapphire
-                    </li>
-                    <li onClick={() => handleFilterClick("Green Sapphire")}>
-                      <ChevronRight size={14} className="chevron" /> Green
-                      Sapphire
-                    </li>
-                    <li onClick={() => handleFilterClick("Orange Sapphire")}>
-                      <ChevronRight size={14} className="chevron" /> Orange
-                      Sapphires
-                    </li>
-                    <li onClick={() => handleFilterClick("White Sapphire")}>
-                      <ChevronRight size={14} className="chevron" /> White
-                      Sapphires
-                    </li>
-                    <li onClick={() => handleFilterClick("Pink Sapphire")}>
-                      <ChevronRight size={14} className="chevron" /> Pink
-                      Sapphires
-                    </li>
-                    <li onClick={() => handleFilterClick("Spinel")}>
-                      <ChevronRight size={14} className="chevron" /> Spinels
-                    </li>
+                    {varieties.map(variety => (
+                      <li key={variety} onClick={() => handleFilterClick(variety)}>
+                        <ChevronRight size={14} className="chevron" /> {variety}
+                      </li>
+                    ))}
                   </ul>
                 </div>
 

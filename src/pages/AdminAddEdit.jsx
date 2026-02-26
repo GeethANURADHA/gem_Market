@@ -1,37 +1,119 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, X } from "lucide-react";
+import { ArrowLeft, Save, X, Loader2 } from "lucide-react";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import { gemService } from "../services/gemService";
+import { gemstoneTypeService } from "../services/gemstoneTypeService";
+import { supabase } from "../lib/supabaseClient";
 import "./AdminAddEdit.css";
+
+/** Fallback categories used when the gemstone_types table is empty */
+const FALLBACK_CATEGORIES = [
+  // Sapphires
+  "Blue Sapphire",
+  "Yellow Sapphire",
+  "Pink Sapphire",
+  "Green Sapphire",
+  "Orange Sapphire",
+  "White Sapphire",
+  "Padparadscha Sapphire",
+  // Corundum
+  "Ruby",
+  // Beryl
+  "Emerald",
+  "Aquamarine",
+  "Morganite",
+  // Spinel & Alexandrite
+  "Spinel",
+  "Alexandrite",
+  // Cat's Eye
+  "Cat's Eye",
+  // Quartz
+  "Amethyst",
+  "Citrine",
+  "Rose Quartz",
+  // Topaz & Tourmaline
+  "Topaz",
+  "Tourmaline",
+  "Paraiba Tourmaline",
+  // Garnet family
+  "Garnet",
+  "Tsavorite Garnet",
+  "Rhodolite Garnet",
+  "Demantoid Garnet",
+  // Others
+  "Moonstone",
+  "Labradorite",
+  "Peridot",
+  "Tanzanite",
+  "Zircon",
+  "Chrysoberyl",
+  "Iolite",
+  "Kunzite",
+  "Opal",
+];
 
 const AdminAddEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!id;
 
-  const [formData, setFormData] = useState(/** @type {{name:string,price:number|string,carat:number|string,description:string,imageUrl:string,category:string}} */ ({
+  const [uploading, setUploading] = useState(false);
+  const [imageFile, setImageFile] = useState(/** @type {File | null} */ (null));
+  const [imagePreview, setImagePreview] = useState("");
+  const [formData, setFormData] = useState({
     name: '',
-    price: '',
-    carat: '',
+    price: 0,
+    carat: 0,
     description: '',
-    imageUrl: '',
-    category: 'Precious',
-  }));
+    imageUrl: '', // Used for displaying existing/preview images
+    category: '', 
+  });
+  const [categories, setCategories] = useState(/** @type {string[]} */ ([]));
 
   useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const types = await gemstoneTypeService.getAll();
+        const names = types.map(t => t.name);
+        // Use DB categories if available, otherwise fall back to the default list
+        const list = names.length > 0 ? names : FALLBACK_CATEGORIES;
+        setCategories(list);
+        if (!isEditMode && list.length > 0) {
+          setFormData(prev => ({ ...prev, category: list[0] }));
+        }
+      } catch (err) {
+        console.error("Failed to load categories:", err);
+        // Always provide a usable list even if Supabase is unreachable
+        setCategories(FALLBACK_CATEGORIES);
+        if (!isEditMode) {
+          setFormData(prev => ({ ...prev, category: FALLBACK_CATEGORIES[0] }));
+        }
+      }
+    };
+    loadCategories();
+
     if (isEditMode) {
       const fetchGem = async () => {
         try {
+          if (!id) return;
           const gem = await gemService.getById(id);
           if (gem) {
-            setFormData(gem);
+            setFormData({
+              name: gem.name || '',
+              price: gem.price || 0,
+              carat: gem.carat || 0,
+              description: gem.description || '',
+              imageUrl: gem.imageUrl || '',
+              category: gem.category || '',
+            });
           } else {
             navigate('/admin');
           }
         } catch (err) {
-          console.error('Failed to load gem:', err);
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          console.error('Failed to load gem:', errorMessage);
           navigate('/admin');
         }
       };
@@ -39,49 +121,66 @@ const AdminAddEdit = () => {
     }
   }, [id, isEditMode, navigate]);
 
-  /** @param {React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>} e */
+  /**
+   * Handles text input changes
+   * @param {React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>} e
+   */
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      // Parse both price and carat as numbers
-      [name]:
-        name === 'price' || name === 'carat' ? parseFloat(value) || '' : value,
+      [name]: name === 'price' || name === 'carat' ? parseFloat(value) || 0 : value,
     }));
   };
 
-  /** @param {React.ChangeEvent<HTMLInputElement>} e */
+  /**
+   * Selection Handling: 
+   * Stores the File object locally for upload during handleSubmit.
+   * @param {React.ChangeEvent<HTMLInputElement>} e
+   */
   const handleImageUpload = (e) => {
-    const file = e.target.files && e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result;
-        if (typeof result === 'string') {
-          setFormData((prev) => ({
-            ...prev,
-            imageUrl: result,
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
-  /** @param {React.FormEvent<HTMLFormElement>} e */
+  /**
+   * Submits the form data and uploads image to 'gems_bucket' using the gem ID
+   * @param {React.FormEvent} e
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      /** @type {import('../services/gemService').Gem} */
-      const payload = /** @type {any} */ (formData);
-      if (isEditMode) {
-        await gemService.update(/** @type {string} */ (id), payload);
+      setUploading(true);
+      let gemId = id;
+
+      // 1. Save gem data to get an ID (if adding) or update
+      if (isEditMode && id) {
+        await gemService.update(id, formData);
       } else {
-        await gemService.add(payload);
+        const newGem = await gemService.add(formData);
+        gemId = newGem.id;
       }
+
+      // 2. Upload image if a new one was selected
+      if (imageFile && gemId) {
+        const filePath = `items/${gemId}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('gems_bucket')
+          .upload(filePath, imageFile, { upsert: true });
+
+        if (uploadError) throw uploadError;
+      }
+
       navigate('/admin');
     } catch (err) {
-      console.error('Failed to save gem:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Failed to save gem:', errorMessage);
+      alert(`Error saving gem: ${errorMessage}`);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -128,10 +227,10 @@ const AdminAddEdit = () => {
               className="input-field"
               required
             >
-              <option value="Precious">Precious</option>
-              <option value="Semi-Precious">Semi-Precious</option>
-              <option value="Organic">Organic</option>
-              <option value="Synthetic">Synthetic</option>
+              <option value="" disabled>Select a category</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
             </select>
           </div>
 
@@ -157,30 +256,38 @@ const AdminAddEdit = () => {
           />
 
           <div className="input-group">
-            <label className="input-label" htmlFor="imageUrl">
+            <label className="input-label" htmlFor="imageFile">
               Gem Image
             </label>
             <input
               type="file"
-              id="imageUrl"
+              id="imageFile"
               accept="image/*"
               onChange={handleImageUpload}
               className="input-field"
               style={{ paddingTop: "8px" }}
+              disabled={uploading}
             />
-            {formData.imageUrl && (
+            {uploading && (
+              <div className="uploading-indicator" style={{ marginTop: "0.5rem", color: "var(--primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Loader2 size={16} className="animate-spin" />
+                <span>Uploading to storage...</span>
+              </div>
+            )}
+            {(imagePreview || formData.imageUrl) && !uploading && (
               <div
                 className="image-preview"
                 style={{ marginTop: "1rem", textAlign: "center" }}
               >
                 <img
-                  src={formData.imageUrl}
+                  src={imagePreview || formData.imageUrl}
                   alt="Preview"
                   style={{
                     maxWidth: "100%",
                     maxHeight: "200px",
                     borderRadius: "4px",
                     objectFit: "contain",
+                    border: "1px solid rgba(212, 175, 55, 0.3)"
                   }}
                 />
               </div>
@@ -198,7 +305,12 @@ const AdminAddEdit = () => {
           />
 
           <div className="form-actions">
-            <Button type="submit" variant="primary" className="save-btn">
+            <Button 
+              type="submit" 
+              variant="primary" 
+              className="save-btn"
+              disabled={uploading}
+            >
               <Save size={20} /> {isEditMode ? "Update Gem" : "Add Gem"}
             </Button>
           </div>

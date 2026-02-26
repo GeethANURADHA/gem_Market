@@ -26,22 +26,15 @@ export const AuthProvider = ({ children }) => {
    * @returns {Promise<boolean>}
    */
   const checkAdminRole = async (userId, email) => {
-    console.log('[Auth] Checking admin role for:', { userId, email });
+    if (!email) return false;
+    console.log('[Auth] Checking admin role for:', email);
     
     try {
-      // Check for user_id OR email match
-      const queryPromise = supabase
+      const { data, error } = await supabase
         .from('admin_roles')
-        .select('id, user_id')
-        .or(`user_id.eq.${userId},email.eq.${email}`)
+        .select('id, user_id, email')
+        .or(`user_id.eq.${userId},email.eq.${email.toLowerCase()}`)
         .maybeSingle();
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Admin role query timed out')), 4000)
-      );
-
-      /** @type {any} */
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
       
       if (error) {
         console.error('[Auth] Admin check error:', error);
@@ -49,18 +42,27 @@ export const AuthProvider = ({ children }) => {
       }
       
       if (data) {
-        console.log('[Auth] Admin role found:', data);
         // If we found a match by email but user_id is missing, link it now
         if (!data.user_id && userId) {
           console.log('[Auth] Linking user_id to admin email account...');
-          await supabase.from('admin_roles').update({ user_id: userId }).eq('id', data.id);
+          const { error: updateError } = await supabase
+            .from('admin_roles')
+            .update({ user_id: userId })
+            .eq('id', data.id);
+          
+          if (updateError) {
+            console.warn('[Auth] Failed to link user_id (likely RLS policy):', updateError.message);
+            // We still return true if the master admin check or the initial match was enough
+          } else {
+            console.log('[Auth] Successfully linked user_id');
+          }
         }
         return true;
       }
       
       return false;
     } catch (err) {
-      console.error('[Auth] Admin check exception:', (/** @type {any} */ (err)).message);
+      console.error('[Auth] Admin check exception:', err);
       return false;
     }
   };

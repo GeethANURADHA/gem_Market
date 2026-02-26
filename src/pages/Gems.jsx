@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, ChevronRight, ChevronDown, ArrowLeft } from "lucide-react";
 import GemCard from "../components/GemCard";
 import { gemService } from "../services/gemService";
+import { gemstoneTypeService } from "../services/gemstoneTypeService";
 import { useAuth } from "../context/authContext";
 import "./Gems.css";
 
@@ -12,30 +13,38 @@ const Gems = () => {
   const [gems, setGems] = useState(/** @type {import('../services/gemService').Gem[]} */ ([]));
   const [filteredGems, setFilteredGems] = useState(/** @type {import('../services/gemService').Gem[]} */ ([]));
   const [searchQuery, setSearchQuery] = useState("");
-  const [maxPrice, setMaxPrice] = useState(10000); // Increased max price for flexibility
+  const [maxPrice, setMaxPrice] = useState(100000000); // 100M default
   const [loading, setLoading] = useState(true);
 
   const [activeFilter, setActiveFilter] = useState("All");
   const [expandedCategories, setExpandedCategories] = useState(/** @type {string[]} */ ([]));
+  const [varieties, setVarieties] = useState(/** @type {string[]} */ ([]));
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Load initial gems from Supabase
+  // Load initial gems and varieties from Supabase
   useEffect(() => {
-    const fetchGems = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const all = await gemService.getAll();
-        setGems(all);
-        setFilteredGems(all);
+        console.log("Fetching gems and varieties...");
+        const [allGems, allTypes] = await Promise.all([
+          gemService.getAll(),
+          gemstoneTypeService.getAll()
+        ]);
+        console.log("Gems fetched:", allGems.length, allGems);
+        console.log("Varieties fetched:", allTypes.length, allTypes);
+        setGems(allGems);
+        setFilteredGems(allGems);
+        setVarieties(allTypes.map(t => t.name));
       } catch (err) {
-        console.error('Failed to load gems:', err);
+        console.error('Failed to load data:', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchGems();
+    fetchData();
   }, []);
 
   // Listen for URL changes from Navbar
@@ -52,6 +61,7 @@ const Gems = () => {
   // Main Filtering Logic
   useEffect(() => {
     let result = gems;
+    console.log("Filtering gems. ActiveFilter:", activeFilter, "Total Gems:", gems.length);
 
     if (searchQuery) {
       result = result.filter(
@@ -64,17 +74,18 @@ const Gems = () => {
 
     if (activeFilter !== "All") {
       result = result.filter((g) => {
-        if (activeFilter === "All Precious Gems")
-          return g.category === "Precious";
-        if (activeFilter === "All Semi Precious")
-          return g.category === "Semi-Precious";
+        const cat = (g.category || "").toLowerCase().trim();
+        const filter = activeFilter.toLowerCase().trim();
 
-        if (activeFilter.includes("Carat") || activeFilter.includes("Points")) {
+        if (filter === "all precious gems") return cat === "precious";
+        if (filter === "all semi precious") return cat === "semi-precious";
+
+        if (filter.includes("carat") || filter.includes("points")) {
           if (!g.carat) return false;
-          if (activeFilter.includes("Below 1.00")) return g.carat < 1.0;
-          if (activeFilter.includes("Above 10.00")) return g.carat > 10.0;
+          if (filter.includes("below 1.00")) return g.carat < 1.0;
+          if (filter.includes("above 10.00")) return g.carat > 10.0;
 
-          const match = activeFilter.match(/([\d.]+)\s*To\s*([\d.]+)/i);
+          const match = filter.match(/([\d.]+)\s*to\s*([\d.]+)/i);
           if (match) {
             return (
               g.carat >= parseFloat(match[1]) && g.carat <= parseFloat(match[2])
@@ -82,16 +93,19 @@ const Gems = () => {
           }
         }
 
-        const term = activeFilter.toLowerCase().replace(/s$/, ""); 
-        return (
+        // Broad match for names, descriptions, or categories
+        const term = filter.replace(/s$/, ""); // Allow plural/singular match
+        const matches = 
           g.name.toLowerCase().includes(term) ||
           (g.description && g.description.toLowerCase().includes(term)) ||
-          (g.category && g.category.toLowerCase().includes(term))
-        );
+          cat.includes(term);
+        
+        return matches;
       });
     }
 
     result = result.filter((g) => g.price <= maxPrice);
+    console.log("Filtered Results Count:", result.length);
     setFilteredGems(result);
   }, [searchQuery, activeFilter, maxPrice, gems]);
 
@@ -103,7 +117,7 @@ const Gems = () => {
   /** @param {string} filterValue */
   const handleSidebarFilter = (filterValue) => {
     setActiveFilter(filterValue);
-    navigate("/gems", { replace: true });
+    navigate(`/gems?filter=${encodeURIComponent(filterValue)}`, { replace: true });
     if (window.innerWidth <= 850) setCollapsed(true);
   };
 
@@ -157,8 +171,8 @@ const Gems = () => {
           <input
             type="range"
             min="0"
-            max="10000"
-            step="100"
+            max="100000000"
+            step="1000"
             value={maxPrice}
             onChange={(e) => setMaxPrice(Number(e.target.value))}
             className="filter-range"
@@ -249,24 +263,11 @@ const Gems = () => {
                 )}
               </h4>
               <ul className={`category-list ${expandedCategories.includes("varieties") ? "expanded" : ""}`}>
-                <li onClick={() => handleSidebarFilter("Blue Sapphire")}>
-                  <ChevronRight size={14} className="chevron" /> Blue Sapphires
-                </li>
-                <li onClick={() => handleSidebarFilter("Yellow Sapphire")}>
-                  <ChevronRight size={14} className="chevron" /> Yellow Sapphire
-                </li>
-                <li onClick={() => handleSidebarFilter("Green Sapphire")}>
-                  <ChevronRight size={14} className="chevron" /> Green Sapphire
-                </li>
-                <li onClick={() => handleSidebarFilter("Orange Sapphire")}>
-                  <ChevronRight size={14} className="chevron" /> Orange Sapphires
-                </li>
-                <li onClick={() => handleSidebarFilter("White Sapphire")}>
-                  <ChevronRight size={14} className="chevron" /> White Sapphires
-                </li>
-                <li onClick={() => handleSidebarFilter("Spinel")}>
-                  <ChevronRight size={14} className="chevron" /> Spinels
-                </li>
+                {varieties.map(variety => (
+                  <li key={variety} onClick={() => handleSidebarFilter(variety)}>
+                    <ChevronRight size={14} className="chevron" /> {variety}
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -387,7 +388,19 @@ const Gems = () => {
 
           {!loading && filteredGems.length === 0 && (
             <div className="no-gems-message">
-              No gems found matching your filters.
+              <h3>No gems found matching your filters.</h3>
+              <p>Try increasing the <strong>Max Price</strong> in the sidebar or clearing the search.</p>
+              <button 
+                className="clear-filters-btn"
+                onClick={() => {
+                  setActiveFilter("All");
+                  setMaxPrice(100000000);
+                  setSearchQuery("");
+                  navigate("/gems", { replace: true });
+                }}
+              >
+                Reset All Filters
+              </button>
             </div>
           )}
         </main>

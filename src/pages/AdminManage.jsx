@@ -28,9 +28,9 @@ const AdminManage = () => {
   };
 
   useEffect(() => {
-    if (!isAdmin) { navigate('/admin/login'); return; }
+    if (!isAdmin) { navigate('/login'); return; }
     loadData();
-  }, [isAdmin]);
+  }, [isAdmin, navigate]);
 
   /**
    * Approve a registration: create Supabase auth user + add to admin_roles

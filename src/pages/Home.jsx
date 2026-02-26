@@ -15,26 +15,16 @@ import "./Home.css";
 const FALLBACK_IMG =
   "https://images.unsplash.com/photo-1599707367072-cd6ad66acc40?w=200&h=200&fit=crop";
 
-const DEFAULT_GEMSTONE_TYPES = [
-  { name: "Blue Sapphire",    img: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&h=200&fit=crop" },
-  { name: "Ruby",             img: "https://images.unsplash.com/photo-1599707367072-cd6ad66acc40?w=200&h=200&fit=crop" },
-  { name: "Emerald",          img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop" },
-  { name: "Yellow Sapphire",  img: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&h=200&fit=crop" },
-  { name: "Alexandrite",      img: "https://images.unsplash.com/photo-1599707367072-cd6ad66acc40?w=200&h=200&fit=crop" },
-  { name: "Spinel",           img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop" },
-  { name: "Padparadscha",     img: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=200&h=200&fit=crop" },
-  { name: "Cat's Eye",        img: "https://images.unsplash.com/photo-1599707367072-cd6ad66acc40?w=200&h=200&fit=crop" },
-];
 
 const Home = () => {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
 
   // ── Sidebar state ──────────────────────────────────────────────────────────
   const [collapsed, setCollapsed] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState(/** @type {string[]} */ ([]));
   const [searchQuery, setSearchQuery] = useState("");
-  const [maxPrice, setMaxPrice] = useState(10000);
+  const [maxPrice, setMaxPrice] = useState(100000000);
 
   // ── Gemstone types state ───────────────────────────────────────────────────
   const [gemTypes, setGemTypes] = useState(
@@ -45,7 +35,7 @@ const Home = () => {
   // ── Add modal state ────────────────────────────────────────────────────────
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newImgFile, setNewImgFile] = useState(/** @type {string} */ (""));
+  const [newImgFile, setNewImgFile] = useState(/** @type {File | null} */ (null));
   const [addImgPreview, setAddImgPreview] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -59,27 +49,10 @@ const Home = () => {
     try {
       setLoadingTypes(true);
       const types = await gemstoneTypeService.getAll();
-      if (types.length === 0) {
-        // Try to seed from defaults
-        await gemstoneTypeService.seedDefaults(DEFAULT_GEMSTONE_TYPES);
-        const seeded = await gemstoneTypeService.getAll();
-        setGemTypes(seeded.length > 0 ? seeded : DEFAULT_GEMSTONE_TYPES.map((d, i) => ({
-          id: `local-${i}`,
-          name: d.name,
-          imgUrl: d.img,
-          displayOrder: i,
-        })));
-      } else {
-        setGemTypes(types);
-      }
-    } catch {
-      // Fallback to static list if Supabase not set up yet
-      setGemTypes(DEFAULT_GEMSTONE_TYPES.map((d, i) => ({
-        id: `local-${i}`,
-        name: d.name,
-        imgUrl: d.img,
-        displayOrder: i,
-      })));
+      setGemTypes(types);
+    } catch (err) {
+      console.error("Failed to load types:", err);
+      setGemTypes([]);
     } finally {
       setLoadingTypes(false);
     }
@@ -179,13 +152,8 @@ const Home = () => {
   const handleAddImageUpload = (e) => {
     const file = e.target.files && e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = /** @type {string} */ (reader.result);
-        setNewImgFile(result);
-        setAddImgPreview(result);
-      };
-      reader.readAsDataURL(file);
+      setNewImgFile(file);
+      setAddImgPreview(URL.createObjectURL(file));
     }
   };
 
@@ -193,19 +161,53 @@ const Home = () => {
     if (!newName.trim()) return;
     setSaving(true);
     try {
+      // 1. Upload image to 'gemstone_bucket' if provided
+      if (newImgFile) {
+        const slug = newName.trim().toLowerCase().replace(/[\s\W]+/g, '-');
+        const fileName = `types/${slug}.jpg`;
+        console.log("Uploading image to gemtype_bucket...");
+        const { error: uploadError } = await gemstoneTypeService.supabase.storage
+          .from('gemtype_bucket')
+          .upload(fileName, newImgFile, { upsert: true });
+
+        if (uploadError) {
+          console.error("Storage upload failed:", uploadError);
+          throw uploadError;
+        }
+        console.log("Image uploaded successfully.");
+      }
+
+      // 2. Add to database (without img_url)
+      console.log("Adding gemstone type to database...");
       const newType = await gemstoneTypeService.add(
         newName.trim(),
-        newImgFile,
         gemTypes.length
       );
+      console.log("Gemstone type added successfully:", newType);
+      
       setGemTypes((prev) => [...prev, newType]);
       setShowAddModal(false);
       setNewName("");
-      setNewImgFile("");
+      setNewImgFile(null);
       setAddImgPreview("");
     } catch (err) {
-      console.error("Add failed:", err);
-      alert("Failed to add gem type. Make sure the Supabase table exists.");
+      const error = /** @type {any} */ (err);
+      console.error("Add failed. Full error object:", error);
+      
+      let debugInfo = "";
+      if (error.code) debugInfo += `\nCode: ${error.code}`;
+      if (error.message) debugInfo += `\nMessage: ${error.message}`;
+      
+      // Determine which step failed: if an image was selected, upload was attempted first
+      const stage = newImgFile ? "Storage Upload or Database Entry" : "Database Entry";
+
+      alert(`Failed to add gem type during ${stage}.
+      ${debugInfo}
+      
+      Verify:
+      1. You are logged in as vetrovivo.lk@gmail.com (Currently: ${user?.email || 'Not logged in'})
+      2. The 'is_admin' function exists in Supabase.
+      3. The storage bucket 'gemtype_bucket' exists and is Public.`);
     }
     setSaving(false);
   };
@@ -285,8 +287,8 @@ const Home = () => {
           <input
             type="range"
             min="0"
-            max="10000"
-            step="100"
+            max="100000000"
+            step="1000"
             value={maxPrice}
             onChange={(e) => setMaxPrice(Number(e.target.value))}
             className="filter-range"

@@ -18,12 +18,23 @@ const GemDetails = () => {
   useEffect(() => {
     const fetchGem = async () => {
       try {
-        if (!id) { navigate("/"); return; }
+        if (!id) { 
+          console.warn("GemDetails: No ID provided in URL");
+          navigate("/"); 
+          return; 
+        }
+        console.log("GemDetails: Fetching gem with ID:", id);
         const foundGem = await gemService.getById(id);
-        if (foundGem) setGem(foundGem);
-        else navigate("/");
+        console.log("GemDetails: Result found:", foundGem);
+
+        if (foundGem) {
+          setGem(foundGem);
+        } else {
+          console.warn("GemDetails: Gem not found in database for ID:", id);
+          navigate("/");
+        }
       } catch (err) {
-        console.error("Failed to load gem:", err);
+        console.error("GemDetails: Failed to load gem:", err);
         navigate("/");
       }
     };
@@ -40,7 +51,7 @@ const GemDetails = () => {
   }
 
   const whatsappMsg = encodeURIComponent(
-    `Hi, I'm interested in purchasing: ${gem.name} (${gem.carat} ct) — $${gem.price.toLocaleString()}`
+    `Hi, I'm interested in purchasing: ${gem.name} (${gem.carat || 'N/A'} ct) — $${(gem.price || 0).toLocaleString()}`
   );
 
   return (
@@ -66,7 +77,11 @@ const GemDetails = () => {
               alt={gem.name}
               className="gd-image"
               onLoad={() => setImgLoaded(true)}
-              onError={(e) => { /** @type {HTMLImageElement} */(e.target).src = FALLBACK_IMG; setImgLoaded(true); }}
+              onError={(e) => { 
+                console.warn("Gem image failed to load, using fallback:", gem.imageUrl);
+                /** @type {HTMLImageElement} */(e.target).src = FALLBACK_IMG; 
+                setImgLoaded(true); 
+              }}
             />
             {/* Category badge */}
             {gem.category && (
@@ -81,18 +96,18 @@ const GemDetails = () => {
 
           {/* Price */}
           <div className="gd-price-row">
-            <span className="gd-price">${gem.price.toLocaleString()}</span>
+            <span className="gd-price">${(gem.price || 0).toLocaleString()}</span>
             <span className="gd-price-label">USD</span>
           </div>
 
           {/* Gem specs chips */}
           <div className="gd-specs">
-            {gem.carat && (
+            {gem.carat ? (
               <div className="gd-spec-chip">
                 <Weight size={14} />
                 <span>{gem.carat} ct</span>
               </div>
-            )}
+            ) : null}
             {gem.category && (
               <div className="gd-spec-chip">
                 <Layers size={14} />
@@ -123,7 +138,6 @@ const GemDetails = () => {
               rel="noreferrer"
               className="gd-btn gd-btn-whatsapp"
             >
-              {/* WhatsApp icon */}
               <svg viewBox="0 0 32 32" width="18" height="18" fill="currentColor">
                 <path d="M16.003 3C9.374 3 4 8.373 4 15.003c0 2.28.64 4.41 1.752 6.22L4 29l7.98-1.726A12.93 12.93 0 0016.003 28C22.63 28 28 22.627 28 16.003 28 9.374 22.629 3 16.003 3zm0 23.6a10.56 10.56 0 01-5.386-1.473l-.386-.23-4.736 1.025 1.056-4.614-.252-.397A10.535 10.535 0 015.4 15.003C5.4 9.147 10.147 4.4 16.003 4.4c5.855 0 10.597 4.747 10.597 10.603 0 5.855-4.742 10.597-10.597 10.597zm5.814-7.94c-.318-.16-1.88-.928-2.172-1.034-.292-.106-.505-.16-.718.16-.213.32-.824 1.034-.01 1.248.104.028 1.278.623 1.758.861.09.044.186.062.28.062.222 0 .437-.095.601-.283.266-.307.797-.962 1.04-1.293.21-.287.046-.567-.18-.72zm-3.08 3.01c-.424.237-.876.356-1.334.356-.677 0-1.348-.22-1.898-.632l-.225-.166-2.33.503.517-2.26-.175-.234a5.24 5.24 0 01-.977-3.04c0-2.892 2.354-5.245 5.248-5.245 2.89 0 5.244 2.353 5.244 5.246 0 2.891-2.353 5.24-5.07 5.472z"/>
               </svg>
@@ -133,7 +147,9 @@ const GemDetails = () => {
             <button
               className="gd-btn gd-btn-inquiry"
               onClick={() => {
-                window.location.href = `mailto:vetrovivo.lk@gmail.com?subject=Purchase Inquiry: ${gem.name}&body=Hi,%0A%0AId like to inquire about: ${gem.name} (${gem.carat} ct) - $${gem.price.toLocaleString()}.%0A%0APlease get back to me.%0A%0AThank you.`;
+                const subject = encodeURIComponent(`Purchase Inquiry: ${gem.name}`);
+                const body = encodeURIComponent(`Hi,\n\nI'd like to inquire about: ${gem.name} (${gem.carat || 'N/A'} ct) - $${(gem.price || 0).toLocaleString()}.\n\nPlease get back to me.\n\nThank you.`);
+                window.location.href = `mailto:vetrovivo.lk@gmail.com?subject=${subject}&body=${body}`;
               }}
             >
               <ShoppingBag size={18} />

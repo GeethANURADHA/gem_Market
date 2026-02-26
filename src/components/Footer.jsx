@@ -31,6 +31,17 @@ const Footer = () => {
       </div>
       <div className="footer-bottom">
         <p>&copy; {new Date().getFullYear()} Gemstone Business. All rights reserved.</p>
+        <p className="footer-dev">
+          Developed by{" "}
+          <a
+            href="https://geethanuradha.github.io/"
+            target="_blank"
+            rel="noreferrer"
+            className="footer-dev-link"
+          >
+            Anusys
+          </a>
+        </p>
       </div>
     </footer>
   );

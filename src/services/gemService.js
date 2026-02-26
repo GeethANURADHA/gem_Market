@@ -12,6 +12,16 @@ import { supabase } from '../lib/supabaseClient';
  */
 
 /**
+ * Constructs the public URL for a gem image in 'gems_bucket'
+ * @param {string} id 
+ * @returns {string}
+ */
+const getGemImgUrl = (id) => {
+  if (!id) return '';
+  return `https://iivkxnrhxazuygylucdv.supabase.co/storage/v1/object/public/gems_bucket/items/${id}.jpg`;
+};
+
+/**
  * @param {Record<string, any>} row
  * @returns {Gem}
  */
@@ -21,7 +31,7 @@ const toGem = (row) => ({
   description: row.description,
   price: row.price,
   carat: row.carat,
-  imageUrl: row.image_url,
+  imageUrl: getGemImgUrl(row.id),
   category: row.category,
 });
 
@@ -34,7 +44,7 @@ const toRow = (gem) => ({
   description: gem.description,
   price: gem.price,
   carat: gem.carat,
-  image_url: gem.imageUrl,
+  // image_url: gem.imageUrl, // Removed: images stored in gems_bucket by ID
   category: gem.category,
 });
 
@@ -64,7 +74,7 @@ export const gemService = {
   },
 
   /**
-   * @param {{name:string,description:string,price:number,carat:number,imageUrl:string,category:string}} gem
+   * @param {{name:string,description:string,price:number,carat:number,category:string}} gem
    * @returns {Promise<Gem>}
    */
   add: async (gem) => {
@@ -104,4 +114,5 @@ export const gemService = {
       .eq('id', id);
     if (error) throw error;
   },
+  supabase,
 };
